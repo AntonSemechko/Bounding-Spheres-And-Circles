@@ -1,13 +1,13 @@
 function [TR,G]=SubdivideSphericalMesh(TR,k,G,W)
 % Subdivide triangular (or quadrilateral) surface mesh, representing 
-% a zero-centered unit sphere, k times using triangular (or quadrilateral)
+% a zero-centered sphere, k times using triangular (or quadrilateral)
 % quadrisection. See function 'TriQuad' (or 'QuadQuad') for more info.
 %
 % INPUT:
-%   - TR   : surface mesh of a unit sphere represented as an object of 
-%            'TriRep' class, 'triangulation' class, or a cell such that 
-%            TR={F,X}, where F is an M-by-3 or M-by-4 array of faces,
-%            and X is an N-by-3 array of vertex coordinates.
+%   - TR   : surface mesh of a ZERO-CENTERED sphere represented as an 
+%            object of 'TriRep' class, 'triangulation' class, or a cell 
+%            such that TR={F,X}, where F is an M-by-3 or M-by-4 array of
+%            faces, and X is an N-by-3 array of vertex coordinates.
 %   - k    : desired number of subdivisions. k=1 is default.
 %   - G    : optional; scalar or vector field defined at the vertices of TR.
 %   - W    : optional; positive weights associated with vertices of TR.
@@ -32,7 +32,8 @@ if fmt==1 && size(F,2)==4
 end
 
 % Make sure vertices of the input mesh lie on a unit sphere
-X=ProjectOnSn(X);
+R=sqrt(sum(X.^2,2));
+X=bsxfun(@rdivide,X,R);
 
 % Return mesh as is if k<1
 k=round(k(1));
@@ -59,7 +60,7 @@ for i=1:k
     X(N1:N2,:)=ProjectOnSn(X(N1:N2,:));
 
 end
-TR=MeshOut(F,X,fmt);
+TR=MeshOut(F,mean(R)*X,fmt);
 
 
 function TR=MeshOut(F,X,fmt)
