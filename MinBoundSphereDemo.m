@@ -4,29 +4,29 @@ function MinBoundSphereDemo
 %
 
 % Load sample triangular surface meshes
-Meshes=load('MBS demo meshes.mat');
-Fields=fieldnames(Meshes);
+Meshes = load('MBS demo meshes.mat');
+Fields = fieldnames(Meshes);
 
 % Compute exact minimum bounding spheres (MBS) of the sample meshes using
 % Wezlz's algorithm and visualize meshes along with their respective MBSs.
 % Also compute approximate MBSs using Ritter's algorithm for comparison.
-N=numel(Fields);
-R=zeros(N,2);
-for i=1:N
+N = numel(Fields);
+R = zeros(N,2);
+for i = 1:N
     
     % Get i-th sample mesh
-    TR=getfield(Meshes,Fields{i});
-    [~,X]=GetMeshData(TR); % array of vertex coordinates
+    TR = Meshes.(Fields{i});
+    [~,X] = GetMeshData(TR); % array of vertex coordinates
     
     % Exact bounding sphere
-    [R(i,1),C,Xb]=ExactMinBoundSphere3D(X); % this function also accepts surface and volumetric meshes directly  
+    [R(i,1),C,Xb] = ExactMinBoundSphere3D(X); % this function also accepts surface and volumetric meshes directly  
     
     % Visualize sample mesh and its MBS
-    [~]=VisualizeBoundSphere(TR,R(i,1),C,Xb);
+    [~] = VisualizeBoundSphere(TR,R(i,1),C,Xb);
     set(gcf,'Name',Fields{i})    
     
     % Radius of the approximate MBS
-    R(i,2)=ApproxMinBoundSphereND(X);
+    R(i,2) = ApproxMinBoundSphereND(X);
     
 end
 

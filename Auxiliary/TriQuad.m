@@ -1,5 +1,5 @@
-function [TR,W,G,SM,idx_unq] = TriQuad(TR,W,G)
-% Subdivide a triangular surface mesh using generalized triangular 
+function [TR, W, G, SM, idx_unq] = TriQuad(TR, W, G)
+% Subdivide triangular surface mesh using generalized triangular 
 % quadrisection. Triangular quadrisection is a linear subdivision procedure
 % which inserts new vertices at the edge midpoints of the input mesh, 
 % thereby producing four new faces for every face of the original mesh:
@@ -22,8 +22,8 @@ function [TR,W,G,SM,idx_unq] = TriQuad(TR,W,G)
 % original mesh. For example, let xi and xj be two vertices connected by an
 % edge, and suppose that Wi and Wj are the corresponding vertex weights. 
 % Position of the new point on the edge (xi,xj) is defined as 
-% (Wi*xi + Wj*xj)/(Wi+Wj). Note that in order to avoid degeneracies and 
-% self-intersections, ALL WEIGHTS MUST BE POSITIVE.
+% (Wi*xi + Wj*xj)/(Wi+Wj). Note, ALL WEIGHTS MUST BE POSITIVE to avoid 
+% degeneracies and self-intersections. 
 %
 % INPUT
 %   - TR   : surface mesh represented as an object of 'TriRep' class,
@@ -31,19 +31,22 @@ function [TR,W,G,SM,idx_unq] = TriQuad(TR,W,G)
 %            'vertices' fields, or a cell such that TR = {Tri,X}, where Tri
 %            is a M-by-3 array of faces and X is a N-by-3 array of vertex
 %            coordinates.
-%   - W    : optional input argument specifying a N-by-1 array of STRICTLY
-%            POSITIVE vertex weights used during interpolation of the new 
-%            vertices, where N is the total number of the original mesh
-%            vertices. 
-%   - G    : optional input specifying scalar or vector field defined at 
-%            the mesh vertices.
+%   - W    : (optional) N-by-1 array of STRICTLY POSITIVE vertex weights 
+%            used during interpolation of the new vertices, where N is the
+%            total number of the original mesh vertices. 
+%   - G    : (optional) scalar, vector, or tensor field defined at the mesh 
+%            vertices and you wish to interpolate along with the vertices.
+%            Note linear interpolation of tensor fields may produce output
+%            that is not a valid tensor.
 %
 % OUTPUT
 %   - TR  : subdivided mesh. Same format as the input mesh.
 %   - W   : interpolated vertex weights.
-%   - G   : interpolated scalar or vector field defined at the vertices of 
-%           the subdivided mesh.
-%   - SM  : subdivision matrix.
+%   - G   : interpolated scalar, vector, or tensor field defined at the
+%           vertices of the subdivided mesh. Note, linear interpolation of
+%           tensor fields may produce output that is not a valid tensor.
+%   - SM  : sparse K-by-N subdivision matrix, where K is the number of
+%           vertices in the subdivided mesh.
 %
 % AUTHOR: Anton Semechko (a.semechko@gmail.com)
 %
@@ -70,7 +73,7 @@ end
 if nargin<3 || isempty(G)
     G = [];
 elseif nargin==3 && ~isempty(G) && (size(G,1)~=size(X,1) || ~isnumeric(G) || ndims(G)>3)
-    error('3-rd input argument must be a %u-by-d array where d>=1',size(X,1))
+    error('3rd input argument must be a %u-by-d array where d>=1',size(X,1))
 end
 
 
@@ -104,50 +107,35 @@ end
 
 % Generate a subdivision matrix if one is required
 Nx = size(X,1);   % # of vertices
-Nt = size(Tri,1); % # of faces
+Nf = size(Tri,1); % # of faces
 if nargout>3
     
-    dNx = size(E,1);
-    if isempty(W), w = repmat([1 1]/2,[dNx 1]); end
+    Ne = size(E,1);
+    if isempty(W), w = repmat([1 1]/2,[Ne 1]); end
 
-    i = (1:dNx)' + Nx;
-    i = cat(1,(1:Nx)',i,i);    
+    i = (1:Ne)' + Nx;
+    i = cat(1,(1:Nx)',i,i);  
+
     j = cat(1,(1:Nx)',E(:));    
     w = cat(1,ones(Nx,1),w(:));
     
-    SM = sparse(i,j,w,Nx+dNx,Nx,2*dNx+Nx);    
+    SM = sparse(i, j, w, Nx + Ne, Nx, 2*Ne + Nx);    
     
 end
 
 % Assign indices to new triangle vertices
-V1 = Nx + idx(1:Nt);
-V2 = Nx + idx((Nt+1):2*Nt);
-V3 = Nx + idx((2*Nt+1):3*Nt);
+Vid1 = Nx + idx(1:Nf);
+Vid2 = Nx + idx((Nf+1):2*Nf);
+Vid3 = Nx + idx((2*Nf+1):3*Nf);
 
 % Connectivities of the new faces
-T1 = [Tri(:,1) V1 V3];
-T2 = [Tri(:,2) V2 V1];
-T3 = [Tri(:,3) V3 V2];
-T4 = [V1       V2 V3];
+Tri1 = [Tri(:,1) Vid1  Vid3]; % [M x 3]
+Tri2 = [Tri(:,2) Vid2  Vid1];
+Tri3 = [Tri(:,3) Vid3  Vid2];
+Tri4 = [Vid1     Vid2  Vid3];
 
-T1 = permute(T1,[3 1 2]);
-T2 = permute(T2,[3 1 2]);
-T3 = permute(T3,[3 1 2]);
-T4 = permute(T4,[3 1 2]);
-
-Tri = cat(1,T1,T2,T3,T4);
-Tri = reshape(Tri,[],3,1);
+Tri = reshape([Tri1 Tri2 Tri3 Tri4]',3,[])'; % [(4*3) x M] --> [(4*M) x 3]
 
 % New mesh
-X = [X;V]; 
-switch fmt
-    case 1
-        TR = triangulation(Tri,X);
-    case 2
-        TR = TriRep(Tri,X); %#ok<*DTRIREP>
-    case 3
-        TR = {Tri X};
-    case 4
-        TR = struct('faces',Tri,'vertices',X);
-end
-
+X = [X; V];
+TR = FormatOutputMesh(Tri,X,fmt);

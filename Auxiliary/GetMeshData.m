@@ -15,7 +15,7 @@ function [Tri,X,fmt] = GetMeshData(TR)
 %             triangular mesh, and M-by-4 array when TR is a quad or tet 
 %             mesh.
 %   - X     : N-by-3 array of vertex coordinates
-%   - fmt   : mesh format (see above)
+%   - fmt   : mesh format identifier (see above)
 %
 % AUTHOR: Anton Semechko (a.semechko@gmail.com)
 %
@@ -45,8 +45,8 @@ if fmt<3, return; end
 
 % Check that face and vertex lists have correct dimensions
 c = size(Tri,2);
-if ~isnumeric(Tri) || ~ismatrix(Tri) || c<3 || c>4 || ~isequal(Tri,round(Tri)) || any(Tri(:)<0 | ~isfinite(Tri(:)))
-    error('Vertex connectivity list must be specified as a M-by-(3 or 4) array of POSITIVE integers')
+if ~isnumeric(Tri) || ~ismatrix(Tri) || c<3 || c>4 || ~isequal(Tri,round(Tri)) || any(Tri(:)<1 | Tri(:)>size(X,1) | ~isfinite(Tri(:)))
+    error('Vertex connectivity list must be specified as a M-by-(3 or 4) array of POSITIVE integers in the range [1,%d]',size(X,1))
 end
 
 if fmt>2 && ~isa(Tri,'double')

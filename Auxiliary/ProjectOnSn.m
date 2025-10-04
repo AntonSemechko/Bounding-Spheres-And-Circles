@@ -1,42 +1,37 @@
-function X = ProjectOnSn(X)
+function [X,R] = ProjectOnSn(X)
 % Project a set of points (or mesh vertices) onto Sn.
 %
-% INPUT:
+% INPUT
 %   - X : N-by-d array of point coordinates, where N is the number of
 %         points. Alternatively, X may be a surface mesh.
 %   
-% OUTPUT:
-%   - X : N-by-d array of point coordinates such that norm(X(i,:))=1.
-%         Alternatively, X may be a mesh whose vertices have beee projected 
+% OUTPUT
+%   - X : N-by-d array of point coordinates such that norm(X(i,:)) = 1.
+%         Alternatively, X may be a mesh whose vertices have been projected 
 %         onto a unit sphere.
+%   - R : N-by-1 array magnitudes of the position vectors in X before
+%         projection.
 %
-% AUTHOR: Anton Semechko
+% AUTHOR: Anton Semechko (a.semechko@gmail.com)
 %
 
 
-if ismatrix(X) && isnumeric(X) % point cloud
+if ismatrix(X) && isnumeric(X) % X is a point cloud
+
+    R = sqrt(sum(X.^2,2));
+    X = bsxfun(@rdivide,X,R);
     
-    X = bsxfun(@rdivide,X,sqrt(sum(X.^2,2)));
-    
-else % mesh
+else % X is a mesh?
     
     try
         [Tri,X,fmt] = GetMeshData(X);
     catch
-        error('Invalid entry for 1st input argument (X)')
+        error("Invalid entry for 1st input argument ('X')")
     end
     
-    X = bsxfun(@rdivide,X,sqrt(sum(X.^2,2)));
-    
-    if fmt==1
-        X = triangulation(Tri,X);
-    elseif fmt==2
-        X = TriRep(Tri,X); %#ok<*DTRIREP>
-    elseif fmt==3
-        X = {Tri X};
-    else
-        X = struct('faces',Tri,'vertices',X);
-    end
+    R = sqrt(sum(X.^2,2));
+    X = bsxfun(@rdivide,X,R);
+
+    X = FormatOutputMesh(Tri,X,fmt);
     
 end
-
